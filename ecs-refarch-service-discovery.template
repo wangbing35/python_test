@@ -526,3 +526,573 @@
                 ]
             }
         },
+        "PublicRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "DependsOn": [
+                "VPC",
+                "AttachGateway"
+            ],
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Public"
+                    }
+                ]
+            }
+        },
+        "PublicRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": [
+                "PublicRouteTable",
+                "AttachGateway"
+            ],
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                }
+            }
+        },
+        "PublicSubnet1RouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "DependsOn": [
+                "PublicRouteTable",
+                "PublicSubnet1",
+                "AttachGateway"
+            ],
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PublicSubnet1"
+                },
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                }
+            }
+        },
+        "TargetGroupPortalApp": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckProtocol": "HTTP",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 4,
+                "Matcher": {
+                    "HttpCode": "200"
+                },
+                "Name": "TargetGroupPortalApp",
+                "Port": 80,
+                "Protocol": "HTTP",
+                "UnhealthyThresholdCount": 3,
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "PublicSubnet2RouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "DependsOn": [
+                "PublicRouteTable",
+                "PublicSubnet2"
+            ],
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "PublicSubnet2"
+                },
+                "RouteTableId": {
+                    "Ref": "PublicRouteTable"
+                }
+            }
+        },
+        "LoadBalancerPortalAppSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "LoadBalancer Internet-facing Security Group",
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": {
+                            "Ref": "PortalAppPort"
+                        },
+                        "ToPort": {
+                            "Ref": "PortalAppPort"
+                        },
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "LoadBalancerPortalAppSecurityGroup"
+                    }
+                ]
+            }
+        },
+        "LoadBalancerTwitchAppSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "LoadBalancer Twitch app Security Group",
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "LoadBalancerTwitchAppSecurityGroup"
+                    }
+                ]
+            }
+        },
+        "LoadBalancerTwitchAppSecurityGroupIngress": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "DependsOn": "ECSInstanceSecurityGroup",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "LoadBalancerTwitchAppSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": "80",
+                "ToPort": "80",
+                "SourceSecurityGroupId": {
+                    "Ref": "ECSInstanceSecurityGroup"
+                }
+            }
+        },
+        "LoadBalancerGoodreadsAppSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "LoadBalancer Goodreads app Security Group",
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "LoadBalancerGoodreadsAppSecurityGroup"
+                    }
+                ]
+            }
+        },
+        "LoadBalancerGoodreadsAppSecurityGroupIngress": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "DependsOn": "ECSInstanceSecurityGroup",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "LoadBalancerGoodreadsAppSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": "80",
+                "ToPort": "80",
+                "SourceSecurityGroupId": {
+                    "Ref": "ECSInstanceSecurityGroup"
+                }
+            }
+        },
+        "ECSInstanceSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "GroupDescription": "Security Group for ECSInstance",
+                "VpcId": {
+                    "Ref": "VPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "ECSInstanceSecurityGroup"
+                    }
+                ]
+            }
+        },
+        "ECSInstanceSecurityGroupPortalApp": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "DependsOn": "LoadBalancerPortalAppSecurityGroup",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "ECSInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "PortalAppPort"
+                },
+                "ToPort": {
+                    "Ref": "PortalAppPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "LoadBalancerPortalAppSecurityGroup"
+                }
+            }
+        },
+        "ECSInstanceSecurityGroupTwitchApp": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "DependsOn": "LoadBalancerTwitchAppSecurityGroup",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "ECSInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "TwitchAppPort"
+                },
+                "ToPort": {
+                    "Ref": "TwitchAppPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "LoadBalancerTwitchAppSecurityGroup"
+                }
+            }
+        },
+        "ECSInstanceSecurityGroupGoodreadsApp": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "DependsOn": "LoadBalancerGoodreadsAppSecurityGroup",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "ECSInstanceSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": {
+                    "Ref": "GoodreadsAppPort"
+                },
+                "ToPort": {
+                    "Ref": "GoodreadsAppPort"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "LoadBalancerGoodreadsAppSecurityGroup"
+                }
+            }
+        },
+        "ECSInstanceRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+                ]
+            }
+        },
+        "ECSInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "DependsOn": "ECSInstanceRole",
+            "Properties": {
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "ECSInstanceRole"
+                    }
+                ]
+            }
+        },
+        "ECSServiceRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ecs.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceRole"
+                ]
+            }
+        },
+        "ECSCluster": {
+            "Type": "AWS::ECS::Cluster"
+        },
+        "ECSTaskDefinitionPortalApp": {
+            "DependsOn": [
+                "LoadBalancerTwitchApp",
+                "LoadBalancerGoodreadsApp"
+            ],
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "PortalApp",
+                        "Image": {
+                            "Ref": "PortalAppDockerImage"
+                        },
+                        "Memory": "100",
+                        "Cpu": "100",
+                        "PortMappings": [
+                            {
+                                "HostPort": {
+                                    "Ref": "PortalAppPort"
+                                },
+                                "ContainerPort": "80"
+                            }
+                        ],
+                        "Environment": [
+                            {
+                                "Name": "TWITCHAPPENDPOINT",
+                                "Value": {
+                                    "Fn::GetAtt": [
+                                        "LoadBalancerTwitchApp",
+                                        "DNSName"
+                                    ]
+                                }
+                            },
+                            {
+                                "Name": "GOODREADSAPPENDPOINT",
+                                "Value": {
+                                    "Fn::GetAtt": [
+                                        "LoadBalancerGoodreadsApp",
+                                        "DNSName"
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "ECSTaskDefinitionTwitchApp": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "TwitchApp",
+                        "Image": {
+                            "Ref": "TwitchAppDockerImage"
+                        },
+                        "Memory": "100",
+                        "Cpu": "100",
+                        "PortMappings": [
+                            {
+                                "HostPort": {
+                                    "Ref": "TwitchAppPort"
+                                },
+                                "ContainerPort": "80"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "ECSTaskDefinitionGoodreadsApp": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Name": "GoodreadsApp",
+                        "Image": {
+                            "Ref": "GoodreadsAppDockerImage"
+                        },
+                        "Memory": "100",
+                        "Cpu": "100",
+                        "PortMappings": [
+                            {
+                                "HostPort": {
+                                    "Ref": "GoodreadsAppPort"
+                                },
+                                "ContainerPort": "80"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "ECSServicePortalApp": {
+            "DependsOn": "LoadBalancerPortalApp",
+            "Type": "AWS::ECS::Service",
+            "Properties": {
+                "Cluster": {
+                    "Ref": "ECSCluster"
+                },
+                "DesiredCount": 1,
+                "LoadBalancers": [
+                    {
+                        "ContainerName": "PortalApp",
+                        "ContainerPort": 80,
+                        "LoadBalancerName": "LoadBalancerPortalApp"
+                    }
+                ],
+                "Role": {
+                    "Ref": "ECSServiceRole"
+                },
+                "TaskDefinition": {
+                    "Ref": "ECSTaskDefinitionPortalApp"
+                }
+            }
+        },
+        "ECSServiceTwitchApp": {
+            "DependsOn": "LoadBalancerTwitchApp",
+            "Type": "AWS::ECS::Service",
+            "Properties": {
+                "Cluster": {
+                    "Ref": "ECSCluster"
+                },
+                "DesiredCount": 1,
+                "LoadBalancers": [
+                    {
+                        "ContainerName": "TwitchApp",
+                        "ContainerPort": 80,
+                        "LoadBalancerName": "LoadBalancerTwitchApp"
+                    }
+                ],
+                "Role": {
+                    "Ref": "ECSServiceRole"
+                },
+                "TaskDefinition": {
+                    "Ref": "ECSTaskDefinitionTwitchApp"
+                }
+            }
+        },
+        "ECSServiceGoodreadsApp": {
+            "DependsOn": "LoadBalancerGoodreadsApp",
+            "Type": "AWS::ECS::Service",
+            "Properties": {
+                "Cluster": {
+                    "Ref": "ECSCluster"
+                },
+                "DesiredCount": 1,
+                "LoadBalancers": [
+                    {
+                        "ContainerName": "GoodreadsApp",
+                        "ContainerPort": 80,
+                        "LoadBalancerName": "LoadBalancerGoodreadsApp"
+                    }
+                ],
+                "Role": {
+                    "Ref": "ECSServiceRole"
+                },
+                "TaskDefinition": {
+                    "Ref": "ECSTaskDefinitionGoodreadsApp"
+                }
+            }
+        },
+        "Dynamodb": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "service",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "dns",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "service",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "dns",
+                        "KeyType": "RANGE"
+                    }
+                ],
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "5",
+                    "WriteCapacityUnits": "5"
+                },
+                "TableName": "ServiceDiscovery"
+            }
+        }
+    },
+    "Outputs": {
+        "LoadBalancerPortalAppUrl": {
+            "Description": "Public hostname of the Portal app load balancer",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "http://",
+                        {
+                            "Fn::GetAtt": [
+                                "LoadBalancerPortalApp",
+                                "DNSName"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        },
+        "LoadBalancerPortalApp": {
+            "Description": "Name of the Portal app load balancer",
+            "Value": {
+                "Ref": "LoadBalancerPortalApp"
+            }
+        },
+        "LoadBalancerTwitchApp": {
+            "Description": "Name of the Twitch app load balancer",
+            "Value": {
+                "Ref": "LoadBalancerTwitchApp"
+            }
+        },
+        "LoadBalancerGoodreadsApp": {
+            "Description": "Name of the Goodreads app load balancer",
+            "Value": {
+                "Ref": "LoadBalancerGoodreadsApp"
+            }
+        },
+        "ECSClusterName": {
+            "Description": "Name of the ECS cluster",
+            "Value": {
+                "Ref": "ECSCluster"
+            }
+        },
+        "GoodreadsAppTaskDefinition": {
+            "Description": "The task definition for the Goodreads app",
+            "Value": {
+                "Ref": "ECSTaskDefinitionGoodreadsApp"
+            }
+        },
+        "TwitchAppTaskDefinition": {
+            "Description": "The task definition for the twitch app",
+            "Value": {
+                "Ref": "ECSTaskDefinitionTwitchApp"
+            }
+        },
+        "PortalAppTaskDefinition": {
+            "Description": "The task definition for the portal app",
+            "Value": {
+                "Ref": "ECSTaskDefinitionPortalApp"
+            }
+        },
+        "ECSServiceRole": {
+            "Description": "Name of the ECS service role",
+            "Value": {
+                "Ref": "ECSServiceRole"
+            }
+        }
+    }
+}
